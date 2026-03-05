@@ -46,10 +46,16 @@ jobs:
             echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
           fi
         
-      - name: Extract Version from Tag
+      - name: Extract Version from Tag / Input
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+      
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Using version: $VERSION"
 
       # DAGs and Artifacts paths
       - name: Prepare DAG & Artifact Paths
