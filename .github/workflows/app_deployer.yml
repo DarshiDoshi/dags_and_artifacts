@@ -1,0 +1,114 @@
+name: NX1 App Deploy
+
+on:
+  push:
+    tags: 'v*'
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'App name'
+        required: true
+      version:
+        description: 'App version'
+        required: true
+        default: v1.0.0
+      dags_dir:
+        description: 'DAGs Directory'
+        required: true
+        default: 'dags'
+      dags_files:
+        description: 'Comma-separated DAG file names'
+        required: true
+        # default: 'dag1.py'
+      artifacts_dir:
+        description: 'Artifacts Directory'
+        required: true
+        default: 'artifacts'
+      artifacts_files:
+        description: 'Comma-separated Artifact file names'
+        required: true
+        # default: 'artifact1.py'
+
+jobs:
+  deploy:
+    name: Deploy to ROSA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set App Name
+        run: |
+          if [[ -n "${{ github.event.inputs.app_name }}" ]]; then
+            echo "APP_NAME=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+          else
+            APP_NAME=${GITHUB_REPOSITORY##*/}
+            echo "APP_NAME=$APP_NAME" >> $GITHUB_ENV
+          fi
+        
+      - name: Extract Version from Tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      # DAGs and Artifacts paths
+      - name: Prepare DAG & Artifact Paths
+        run: |
+          DAGS_DIR=${{ github.event.inputs.dags_dir || 'dags' }}
+          DAGS_FILES="${{ github.event.inputs.dags_files }}"
+      
+          ARTIFACTS_DIR=${{ github.event.inputs.artifacts_dir || 'artifacts' }}
+          ARTIFACTS_FILES="${{ github.event.inputs.artifacts_files }}"
+      
+          # If DAG files not specified → include all files in dags directory
+          if [[ -z "$DAGS_FILES" ]]; then
+            FULL_DAGS=$(find "$DAGS_DIR" -type f | paste -sd "," -)
+          else
+            FULL_DAGS=""
+            for file in $(echo $DAGS_FILES | tr ',' ' '); do
+              FULL_DAGS="$FULL_DAGS,$DAGS_DIR/$file"
+            done
+            FULL_DAGS=${FULL_DAGS:1}
+          fi
+      
+          # If Artifact files not specified → include all files in artifacts directory
+          if [[ -z "$ARTIFACTS_FILES" ]]; then
+            FULL_ARTIFACTS=$(find "$ARTIFACTS_DIR" -type f | paste -sd "," -)
+          else
+            FULL_ARTIFACTS=""
+            for file in $(echo $ARTIFACTS_FILES | tr ',' ' '); do
+              FULL_ARTIFACTS="$FULL_ARTIFACTS,$ARTIFACTS_DIR/$file"
+            done
+            FULL_ARTIFACTS=${FULL_ARTIFACTS:1}
+          fi
+      
+          echo "FULL_DAGS=$FULL_DAGS" >> $GITHUB_ENV
+          echo "FULL_ARTIFACTS=$FULL_ARTIFACTS" >> $GITHUB_ENV
+      
+          echo "DAGs: $FULL_DAGS"
+          echo "Artifacts: $FULL_ARTIFACTS"
+          
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install NX1 SDK
+        run: pip install git+https://github.com/nexuscognitive/nx1-sdk
+
+      - name: Package Dependencies
+        run: |
+          if [ -d "deps" ]; then
+            tar -czf deps.tar.gz deps/
+          fi
+
+      - name: Deploy App
+        env:
+          NX1_API_KEY: ${{ secrets.NX1_API_KEY }}
+          NX1_HOST: ${{ secrets.NX1_HOST }}
+        run: |
+          nx1 apps deploy \
+            --app-name "$APP_NAME" \
+            --version "${{ github.event.inputs.version || github.sha }}" \
+            --dags "$FULL_DAGS" \
+            --artifacts "deps.tar.gz,$FULL_ARTIFACTS"
