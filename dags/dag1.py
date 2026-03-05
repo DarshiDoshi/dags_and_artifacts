@@ -9,7 +9,7 @@ default_args = {
 }
 
 @dag(
-    dag_id="dag1_dd",
+    dag_id="dag1",
     default_args=default_args,
     description="A simple example DAG for Airflow 3",
     schedule="@daily",
