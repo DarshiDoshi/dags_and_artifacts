@@ -115,6 +115,6 @@ jobs:
         run: |
           nx1 apps deploy \
             --app-name "$APP_NAME" \
-            --version "${{ github.event.inputs.version || github.sha }}" \
+            --version "$VERSION" \
             --dags "$FULL_DAGS" \
             --artifacts "deps.tar.gz,$FULL_ARTIFACTS"
