@@ -32,8 +32,8 @@ jobs:
   deploy:
     uses: nexuscognitive/global_ci_template/.github/workflows/app_deployer.yml@feature/nx1_app_deploy
 
-    # with:
-    #   app_name: my-app
+    with:
+      app_name: my-app-2
     #   dags_files: test_dag_1.py,test_dag_2.py
     #   artifacts_files: artifact1.py
 
