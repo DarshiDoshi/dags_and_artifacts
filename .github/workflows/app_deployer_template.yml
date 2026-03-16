@@ -13,7 +13,7 @@ jobs:
 
     with:
       app_name: my-app
-      dags_files: dag1.py,dag2.py
+      dags_files: test_dag_1.py,test_dag_2.py
       artifacts_files: artifact1.py
 
     secrets:
