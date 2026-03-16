@@ -2,8 +2,8 @@ name: NX1 App Deploy
 run-name: NX1 App Deploy
 
 on:
-  push:
-    tags: 'v*'
+  # push:
+  #   tags: 'v*'
   workflow_dispatch:
     inputs:
       app_name:
